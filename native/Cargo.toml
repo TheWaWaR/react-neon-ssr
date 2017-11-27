@@ -1,0 +1,16 @@
+[package]
+name = "react-neon-ssr"
+version = "0.1.0"
+authors = ["Qian Linfeng <thewawar@gmail.com>"]
+license = "MIT"
+build = "build.rs"
+
+[lib]
+name = "test_react_ssr"
+crate-type = ["dylib"]
+
+[build-dependencies]
+neon-build = "0.1.22"
+
+[dependencies]
+neon = "0.1.22"
