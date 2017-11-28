@@ -1,7 +1,10 @@
 #[macro_use]
 extern crate neon;
 
+use std::ops::Deref;
+
 use neon::vm::{Call, JsResult};
+use neon::js::Value;
 use neon::js::JsString;
 
 mod dom_string_renderer;
@@ -12,6 +15,16 @@ fn render_to_string(call: Call) -> JsResult<JsString> {
     let mut rv = String::from_utf8(
         dom_string_renderer::render_to_string(())
     ).unwrap();
+    println!("args: {:?}", call
+             .arguments
+             .get(scope, 0)
+             .unwrap()
+             .deref()
+             .to_string(scope)
+             .unwrap()
+             .deref()
+             .value()
+    );
     rv.push_str("~render_to_string");
     Ok(JsString::new(scope, rv.as_str()).unwrap())
 }
