@@ -1,6 +1,6 @@
 {
   "name": "react-neon-ssr",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "",
   "main": "lib/index.js",
   "author": "Qian Linfeng <thewawar@gmail.com>",
