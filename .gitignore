@@ -1,6 +1,8 @@
+build/
 native/target
 native/index.node
 native/artifacts.json
+yarn.lock
 **/*~
 **/node_modules
 **/.DS_Store

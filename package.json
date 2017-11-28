@@ -1,14 +1,29 @@
 {
-  "name": "react-neon-ssr",
-  "version": "0.1.2",
-  "description": "",
-  "main": "native/index.node",
-  "author": "Qian Linfeng <thewawar@gmail.com>",
-  "license": "MIT",
+  "name": "react-fixtures-ssr",
+  "version": "0.1.0",
+  "private": true,
+  "devDependencies": {
+    "concurrently": "3.1.0",
+    "http-proxy-middleware": "0.17.3",
+    "react-scripts": "0.9.5"
+  },
   "dependencies": {
-    "neon-cli": "^0.1.22"
+    "neon-cli": "^0.1.22",
+    "express": "^4.14.0",
+    "ignore-styles": "^5.0.1",
+    "import-export": "^1.0.1",
+    "node-fetch": "^1.6.3",
+    "react": "^16.1.1",
+    "react-dom": "^16.1.1"
   },
   "scripts": {
-    "install": "neon build"
+    "install": "neon build",
+    "start": "concurrently \"npm run start:server\" \"npm run start:client\"",
+    "start:client": "PORT=3001 react-scripts start",
+    "start:server": "NODE_ENV=development node server",
+    "start:prod": "react-scripts build && NODE_ENV=production node server",
+    "build": "react-scripts build",
+    "test": "react-scripts test --env=jsdom",
+    "eject": "react-scripts eject"
   }
 }
