@@ -7,11 +7,6 @@ use neon::js::JsString;
 mod dom_string_renderer;
 mod partial_renderer;
 
-use partial_renderer::{
-    ReadSize,
-    DomServerRenderer,
-};
-
 fn render_to_string(call: Call) -> JsResult<JsString> {
     let scope = call.scope;
     let mut rv = String::from_utf8(
