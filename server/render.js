@@ -1,5 +1,5 @@
 import React from 'react';
-import {renderToString} from '../lib';
+import {renderToString} from '../native';
 
 import App from '../src/components/App';
 

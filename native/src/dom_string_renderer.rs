@@ -1,3 +1,4 @@
+use std;
 use std::ops::Deref;
 use std::error::Error;
 
@@ -23,24 +24,21 @@ use neon::js::{
 
 use partial_renderer::{ReadSize, DomServerRenderer};
 
+
+fn get_raw(scope: &mut RootScope, obj: Local, key: &str) -> Local {
+    JsObject::from_raw(obj)
+        .get(scope, key)
+        .unwrap()
+        .deref()
+        .to_raw()
+}
+
 fn get_obj(scope: &mut RootScope, obj: Local, key: &str) -> JsObject {
-    JsObject::from_raw(
-        JsObject::from_raw(obj)
-            .get(scope, key)
-            .unwrap()
-            .deref()
-            .to_raw()
-    )
+    JsObject::from_raw(get_raw(scope, obj, key))
 }
 
 fn get_fn(scope: &mut RootScope, obj: Local, key: &str) -> JsFunction {
-    JsFunction::<JsObject>::from_raw(
-        JsObject::from_raw(obj)
-            .get(scope, key)
-            .unwrap()
-            .deref()
-            .to_raw()
-    )
+    JsFunction::<JsObject>::from_raw(get_raw(scope, obj, key))
 }
 
 fn to_string<T: Value>(scope: &mut RootScope, obj: T) -> String {
@@ -50,45 +48,89 @@ fn to_string<T: Value>(scope: &mut RootScope, obj: T) -> String {
         .value()
 }
 
+fn get_children(scope: &mut RootScope, props: Local) -> Vec<JsValue> {
+    let children_raw = get_raw(scope, props, "children");
+    let val = JsValue::from_raw(children_raw).as_value(scope);
+    let mut children = Vec::new();
+    if val.is_a::<JsString>() {
+        children.push(*val);
+    } else if val.is_a::<JsArray>() {
+        for v1 in JsArray::from_raw(val.to_raw()).to_vec(scope).unwrap() {
+            if v1.is_a::<JsArray>() {
+                for v1 in JsArray::from_raw(v1.to_raw()).to_vec(scope).unwrap() {
+                    children.push(*v1);
+                }
+            } else {
+                children.push(*v1);
+            }
+        }
+    }
+    children
+}
+
+fn render_type(scope: & mut RootScope, component: Local, level: usize) {
+    let prefix = std::iter::repeat("  ").take(level).collect::<String>();
+    let type_raw = get_raw(scope, component, "type");
+    let type_obj = JsObject::from_raw(type_raw);
+    // println!(">>> type={}", to_string(scope, type_obj));
+    let props = get_obj(scope, component, "props");
+    // println!(">>> props={}", to_string(scope, props));
+    let type_val = type_obj.as_value(scope);
+    if type_val.is_a::<JsFunction>() {
+        let props = props.as_value(scope);
+        let instance: Handle<JsObject> = JsFunction::from_raw(type_raw)
+            .construct(scope, vec![props])
+            .unwrap();
+        // println!(">>> instance={}", to_string(scope, *instance));
+        let render_fn = get_fn(scope, instance.to_raw(), "render");
+        let this = instance.as_value(scope);
+        let obj = JsObject::from_raw(instance.to_raw()).as_value(scope);
+        let rendered_component = render_fn
+            .call(scope, this, vec![obj])
+            .unwrap();
+        // println!(">>> rendered_component={}", to_string(scope, *rendered_component));
+        render_type(scope, rendered_component.deref().to_raw(), level);
+    } else if type_val.is_a::<JsString>() {
+        let type_str = to_string(scope, type_obj);
+        println!("{}<{}>", prefix, type_str);
+        let children = get_children(scope, props.to_raw());
+        for child in children {
+            let child_val = child.as_value(scope);
+            if child_val.is_a::<JsString>()
+                || child_val.is_a::<JsNumber>()
+                || child_val.is_a::<JsBoolean>()
+            {
+                println!("{}  {}", prefix, to_string(scope, child));
+            } else if child_val.is_a::<JsObject>() {
+                render_type(scope, child.to_raw(), level+1);
+            } else {
+                println!(">>> child={}", to_string(scope, child));
+                panic!("Invalid child type");
+            }
+        }
+        println!("{}<{}/>", prefix, to_string(scope, type_obj));
+    } else {
+        if JsValue::from_raw(component).as_value(scope).is_a::<JsArray>() {
+            println!("component is a JsArray");
+        }
+        println!(">>> component={}", to_string(scope, JsObject::from_raw(component)));
+        println!(">>> type={}", to_string(scope, type_obj));
+        println!(">>> props={}", to_string(scope, props));
+        let children = get_children(scope, props.to_raw());
+        for child in children {
+            println!(">>> child={}", to_string(scope, child));
+        }
+        panic!("Invalid component type");
+    }
+}
+
 pub fn render_to_string(call: Call) -> JsResult<JsString> {
     let scope = call.scope;
     let app = call
         .arguments
         .get(scope, 0)
         .unwrap();
-    let app_class = get_obj(scope, app.to_raw(), "type");
-    let app_props = get_obj(scope, app.to_raw(), "props");
-    println!(">>> app_class={}", to_string(scope, app_class));
-    println!(">>> app_props={}", to_string(scope, app_props));
-    let app_call_fn = get_fn(scope, app_class.to_raw(), "call");
-    let prototype = get_obj(scope, app_class.to_raw(), "prototype");
-    println!(">>> prototype={}", to_string(scope, prototype));
-    let this = app_class.as_value(scope);
-    let obj = JsObject::new(scope);
-    obj.set("__proto__", prototype.as_value(scope)).unwrap();
-    let obj = obj.as_value(scope);
-    let props = app_props.as_value(scope);
-    let instance = app_call_fn
-        .call(scope, this, vec![obj, props])
-        .map_err(|e| {
-            println!("[Error]: {:?}", e);
-            ()
-        })
-        .unwrap();
-    println!(">>> instance={}", to_string(scope, *instance));
-    let render_fn = get_fn(scope, instance.to_raw(), "render");
-    println!(">>> render_fn={}", to_string(scope, render_fn));
-    let this = instance.as_value(scope);
-    let obj = JsObject::from_raw(instance.to_raw()).as_value(scope);
-    let rendered_app = render_fn
-        .call(scope, this, vec![obj])
-        .map_err(|e| {
-            println!("[Error]: description={:?}, cause={:?}, e={}",
-                     e.description(), e.cause(), e);
-            ()
-        })
-        .unwrap();
-    println!(">>> rendered_app={}", to_string(scope, *rendered_app));
+    let _ = render_type(scope, app.to_raw(), 0);
     let element = ();
     let bytes = DomServerRenderer::new(vec![element], false)
         .read(ReadSize::Infinity);
