@@ -62,15 +62,19 @@ fn render_to_string(call: Call) -> JsResult<JsString> {
         .get(scope, 0)
         .unwrap();
     let app_class = get_obj(scope, app.to_raw(), "type");
+    let app_props = get_obj(scope, app.to_raw(), "props");
     println!(">>> app_class={}", to_string(scope, app_class));
+    println!(">>> app_props={}", to_string(scope, app_props));
     let app_call_fn = get_fn(scope, app_class.to_raw(), "call");
     let prototype = get_obj(scope, app_class.to_raw(), "prototype");
     println!(">>> prototype={}", to_string(scope, prototype));
     let this = app_class.as_value(scope);
     let obj = JsObject::new(scope);
     obj.set("__proto__", prototype.as_value(scope)).unwrap();
+    let obj = obj.as_value(scope);
+    let props = app_props.as_value(scope);
     let instance = app_call_fn
-        .call(scope, this, vec![obj])
+        .call(scope, this, vec![obj, props])
         .map_err(|e| {
             println!("[Error]: {:?}", e);
             ()
@@ -90,6 +94,8 @@ fn render_to_string(call: Call) -> JsResult<JsString> {
         })
         .unwrap();
     println!(">>> rendered_app={}", to_string(scope, *rendered_app));
+
+    println!(">>> app={}", to_string(scope, *app));
     let mut rv = String::from_utf8(
         dom_string_renderer::render_to_string(())
     ).unwrap();
