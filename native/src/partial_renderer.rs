@@ -17,6 +17,6 @@ impl DomServerRenderer {
     }
 
     pub fn read(&mut self, size: ReadSize) -> Vec<u8> {
-        Vec::new()
+        String::from("DomServerRenderer").as_bytes().to_vec()
     }
 }
