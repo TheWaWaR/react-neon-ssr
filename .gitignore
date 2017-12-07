@@ -1,4 +1,5 @@
 build/
+native/Cargo.lock
 native/target
 native/index.node
 native/artifacts.json

@@ -1,9 +1,12 @@
 #[macro_use]
 extern crate neon;
 extern crate neon_runtime;
+#[macro_use]
+extern crate lazy_static;
 
 mod dom_string_renderer;
 mod partial_renderer;
+mod util;
 
 use std::ops::Deref;
 use std::error::Error;
