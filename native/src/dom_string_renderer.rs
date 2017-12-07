@@ -57,9 +57,13 @@ fn get_children(scope: &mut RootScope, props: Local) -> Vec<JsValue> {
     } else if val.is_a::<JsArray>() {
         for v1 in JsArray::from_raw(val.to_raw()).to_vec(scope).unwrap() {
             if v1.is_a::<JsArray>() {
-                for v1 in JsArray::from_raw(v1.to_raw()).to_vec(scope).unwrap() {
-                    children.push(*v1);
-                }
+                children.extend(
+                    JsArray::from_raw(v1.to_raw())
+                        .to_vec(scope)
+                        .unwrap()
+                        .iter()
+                        .map(|v| v.deref())
+                );
             } else {
                 children.push(*v1);
             }
