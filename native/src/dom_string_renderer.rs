@@ -22,6 +22,7 @@ use neon::js::{
     JsValue,
 };
 
+use util::omitted_close_tags::omittedCloseTags;
 use partial_renderer::{ReadSize, DomServerRenderer};
 
 
@@ -72,7 +73,12 @@ fn get_children(scope: &mut RootScope, props: Local) -> Vec<JsValue> {
     children
 }
 
-fn render_type(scope: & mut RootScope, component: Local, level: usize) {
+fn render_type(
+    html: &mut String,
+    scope: &mut RootScope,
+    component: Local,
+    level: usize
+) {
     let prefix = std::iter::repeat("  ").take(level).collect::<String>();
     let type_raw = get_raw(scope, component, "type");
     let type_obj = JsObject::from_raw(type_raw);
@@ -93,10 +99,21 @@ fn render_type(scope: & mut RootScope, component: Local, level: usize) {
             .call(scope, this, vec![obj])
             .unwrap();
         // println!(">>> rendered_component={}", to_string(scope, *rendered_component));
-        render_type(scope, rendered_component.deref().to_raw(), level);
+        render_type(html, scope, rendered_component.deref().to_raw(), level);
     } else if type_val.is_a::<JsString>() {
-        let type_str = to_string(scope, type_obj);
-        println!("{}<{}>", prefix, type_str);
+        let tag = to_string(scope, type_obj);
+        let mut header = format!("{}<{}", prefix, tag);
+        let mut footer = String::new();
+        if omittedCloseTags.contains_key(tag.as_str()) {
+            header.push_str("/>");
+            header.push_str("\n");
+        } else {
+            header.push_str(">");
+            header.push_str("\n");
+            footer = format!("{}</{}>", prefix, tag);
+            footer.push_str("\n");
+        }
+        html.push_str(header.as_str());
         let children = get_children(scope, props.to_raw());
         for child in children {
             let child_val = child.as_value(scope);
@@ -104,15 +121,17 @@ fn render_type(scope: & mut RootScope, component: Local, level: usize) {
                 || child_val.is_a::<JsNumber>()
                 || child_val.is_a::<JsBoolean>()
             {
-                println!("{}  {}", prefix, to_string(scope, child));
+                let mut content = format!("{}  {}", prefix, to_string(scope, child));
+                content.push_str("\n");
+                html.push_str(content.as_str());
             } else if child_val.is_a::<JsObject>() {
-                render_type(scope, child.to_raw(), level+1);
+                render_type(html, scope, child.to_raw(), level+1);
             } else {
                 println!(">>> child={}", to_string(scope, child));
                 panic!("Invalid child type");
             }
         }
-        println!("{}<{}/>", prefix, to_string(scope, type_obj));
+        html.push_str(footer.as_str());
     } else {
         if JsValue::from_raw(component).as_value(scope).is_a::<JsArray>() {
             println!("component is a JsArray");
@@ -134,12 +153,12 @@ pub fn render_to_string(call: Call) -> JsResult<JsString> {
         .arguments
         .get(scope, 0)
         .unwrap();
-    let _ = render_type(scope, app.to_raw(), 0);
+    let mut html = String::new();
+    let _ = render_type(&mut html, scope, app.to_raw(), 0);
     let element = ();
-    let bytes = DomServerRenderer::new(vec![element], false)
+    let _bytes = DomServerRenderer::new(vec![element], false)
         .read(ReadSize::Infinity);
-    let rv = String::from_utf8(bytes).unwrap();
-    Ok(JsString::new(scope, rv.as_str()).unwrap())
+    Ok(JsString::new(scope, html.as_str()).unwrap())
 }
 
 pub fn render_to_static_markup(call: Call) -> JsResult<JsString> {

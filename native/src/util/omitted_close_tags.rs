@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 // react/packages/react-dom/src/shared/omittedCloseTags.js
 lazy_static! {
-    static ref omittedCloseTags: HashMap<&'static str, bool> = {
+    pub static ref omittedCloseTags: HashMap<&'static str, bool> = {
         let mut m = HashMap::new();
         m.insert("area", true);
         m.insert("base", true);
@@ -22,11 +22,9 @@ lazy_static! {
         m
     };
 
-    static ref voidElementTags: HashMap<&'static str, bool> = {
+    pub static ref voidElementTags: HashMap<&'static str, bool> = {
         let mut m = omittedCloseTags.clone();
         m.insert("menuitem", true);
         m
     };
-
 }
-
