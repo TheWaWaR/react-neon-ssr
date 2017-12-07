@@ -1,3 +1,9 @@
+# Build native extension first
+
+``` bash
+neon build
+```
+
 # SSR Fixtures
 
 A set of test cases for quickly identifying issues with server-side rendering.
@@ -8,7 +14,6 @@ To reference a local build of React, first run `npm run build` at the root
 of the React project. Then:
 
 ```
-cd fixtures/ssr
 yarn
 yarn start
 ```
