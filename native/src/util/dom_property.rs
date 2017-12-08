@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::HashSet;
 
 // react/packages/react-dom/src/shared/DOMProperty.js
 pub const MUST_USE_PROPERTY: u32 = 0x1;
@@ -19,16 +19,14 @@ lazy_static! {
     static ref ATTRIBUTE_NAME_CHAR: String = format!(
         "{}{}", ATTRIBUTE_NAME_START_CHAR, "\\-.0-9\\u00B7\\u0300-\\u036F\\u203F-\\u2040"
     );
-    static ref RESERVED_PROPS: HashMap<&'static str, bool> = {
-        let mut m = HashMap::new();
-        m.insert("children", true);
-        m.insert("dangerouslySetInnerHTML", true);
-        m.insert("defaultValue", true);
-        m.insert("defaultChecked", true);
-        m.insert("innerHTML", true);
-        m.insert("suppressContentEditableWarning", true);
-        m.insert("suppressHydrationWarning", true);
-        m.insert("style", true);
-        m
+    static ref RESERVED_PROPS: HashSet<&'static str> = hashset!{
+        "children",
+        "dangerouslySetInnerHTML",
+        "defaultValue",
+        "defaultChecked",
+        "innerHTML",
+        "suppressContentEditableWarning",
+        "suppressHydrationWarning",
+        "style",
     };
 }

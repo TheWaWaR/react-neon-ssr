@@ -1,30 +1,28 @@
-use std::collections::HashMap;
+use std::collections::HashSet;
 
 // react/packages/react-dom/src/shared/omittedCloseTags.js
 lazy_static! {
-    pub static ref omittedCloseTags: HashMap<&'static str, bool> = {
-        let mut m = HashMap::new();
-        m.insert("area", true);
-        m.insert("base", true);
-        m.insert("br", true);
-        m.insert("col", true);
-        m.insert("embed", true);
-        m.insert("hr", true);
-        m.insert("img", true);
-        m.insert("input", true);
-        m.insert("keygen", true);
-        m.insert("link", true);
-        m.insert("meta", true);
-        m.insert("param", true);
-        m.insert("source", true);
-        m.insert("track", true);
-        m.insert("wbr", true);
-        m
+    pub static ref omittedCloseTags: HashSet<&'static str> = hashset!{
+        "area",
+        "base",
+        "br",
+        "col",
+        "embed",
+        "hr",
+        "img",
+        "input",
+        "keygen",
+        "link",
+        "meta",
+        "param",
+        "source",
+        "track",
+        "wbr",
     };
 
-    pub static ref voidElementTags: HashMap<&'static str, bool> = {
+    pub static ref voidElementTags: HashSet<&'static str> = {
         let mut m = omittedCloseTags.clone();
-        m.insert("menuitem", true);
+        m.insert("menuitem");
         m
     };
 }

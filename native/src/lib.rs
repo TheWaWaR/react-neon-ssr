@@ -3,6 +3,8 @@ extern crate neon;
 extern crate neon_runtime;
 #[macro_use]
 extern crate lazy_static;
+#[macro_use]
+extern crate maplit;
 
 mod dom_string_renderer;
 mod partial_renderer;

@@ -104,7 +104,7 @@ fn render_type(
         let tag = to_string(scope, type_obj);
         let mut header = format!("{}<{}", prefix, tag);
         let mut footer = String::new();
-        if omittedCloseTags.contains_key(tag.as_str()) {
+        if omittedCloseTags.contains(tag.as_str()) {
             header.push_str("/>");
             header.push_str("\n");
         } else {

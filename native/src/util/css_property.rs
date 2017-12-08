@@ -1,5 +1,5 @@
 
-use std::collections::HashMap;
+use std::collections::HashSet;
 
 // react/packages/react-dom/src/shared/CSSProperty.js
 
@@ -12,51 +12,49 @@ lazy_static! {
     /**
      * CSS properties which accept numbers but are not in units of "px".
      */
-    static ref isUnitlessNumber: HashMap<&'static str, bool> = {
-        let mut m = HashMap::new();
-        m.insert("animationIterationCount", true);
-        m.insert("borderImageOutset", true);
-        m.insert("borderImageSlice", true);
-        m.insert("borderImageWidth", true);
-        m.insert("boxFlex", true);
-        m.insert("boxFlexGroup", true);
-        m.insert("boxOrdinalGroup", true);
-        m.insert("columnCount", true);
-        m.insert("columns", true);
-        m.insert("flex", true);
-        m.insert("flexGrow", true);
-        m.insert("flexPositive", true);
-        m.insert("flexShrink", true);
-        m.insert("flexNegative", true);
-        m.insert("flexOrder", true);
-        m.insert("gridRow", true);
-        m.insert("gridRowEnd", true);
-        m.insert("gridRowSpan", true);
-        m.insert("gridRowStart", true);
-        m.insert("gridColumn", true);
-        m.insert("gridColumnEnd", true);
-        m.insert("gridColumnSpan", true);
-        m.insert("gridColumnStart", true);
-        m.insert("fontWeight", true);
-        m.insert("lineClamp", true);
-        m.insert("lineHeight", true);
-        m.insert("opacity", true);
-        m.insert("order", true);
-        m.insert("orphans", true);
-        m.insert("tabSize", true);
-        m.insert("widows", true);
-        m.insert("zIndex", true);
-        m.insert("zoom", true);
+    static ref isUnitlessNumber: HashSet<&'static str> = hashset!{
+        "animationIterationCount",
+        "borderImageOutset",
+        "borderImageSlice",
+        "borderImageWidth",
+        "boxFlex",
+        "boxFlexGroup",
+        "boxOrdinalGroup",
+        "columnCount",
+        "columns",
+        "flex",
+        "flexGrow",
+        "flexPositive",
+        "flexShrink",
+        "flexNegative",
+        "flexOrder",
+        "gridRow",
+        "gridRowEnd",
+        "gridRowSpan",
+        "gridRowStart",
+        "gridColumn",
+        "gridColumnEnd",
+        "gridColumnSpan",
+        "gridColumnStart",
+        "fontWeight",
+        "lineClamp",
+        "lineHeight",
+        "opacity",
+        "order",
+        "orphans",
+        "tabSize",
+        "widows",
+        "zIndex",
+        "zoom",
 
         // SVG-related properties
-        m.insert("fillOpacity", true);
-        m.insert("floodOpacity", true);
-        m.insert("stopOpacity", true);
-        m.insert("strokeDasharray", true);
-        m.insert("strokeDashoffset", true);
-        m.insert("strokeMiterlimit", true);
-        m.insert("strokeOpacity", true);
-        m.insert("strokeWidth", true);
-        m
+        "fillOpacity",
+        "floodOpacity",
+        "stopOpacity",
+        "strokeDasharray",
+        "strokeDashoffset",
+        "strokeMiterlimit",
+        "strokeOpacity",
+        "strokeWidth",
     };
 }
