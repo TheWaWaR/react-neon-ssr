@@ -11,60 +11,55 @@ use util::dom_property::{
 
 // react/packages/react-dom/src/shared/HTMLDOMPropertyConfig.js
 lazy_static! {
-    static ref Properties: HashMap<&'static str, u32> = {
-        let mut m = HashMap::new();
-        m.insert("allowFullScreen", HAS_BOOLEAN_VALUE);
-        m.insert("autoFocus", HAS_STRING_BOOLEAN_VALUE);
-        m.insert("async", HAS_BOOLEAN_VALUE);
-        m.insert("autoPlay", HAS_BOOLEAN_VALUE);
-        m.insert("capture", HAS_BOOLEAN_VALUE);
-        m.insert("checked", MUST_USE_PROPERTY | HAS_BOOLEAN_VALUE);
-        m.insert("cols", HAS_POSITIVE_NUMERIC_VALUE);
-        m.insert("contentEditable", HAS_STRING_BOOLEAN_VALUE);
-        m.insert("controls", HAS_BOOLEAN_VALUE);
-        m.insert("default", HAS_BOOLEAN_VALUE);
-        m.insert("defer", HAS_BOOLEAN_VALUE);
-        m.insert("disabled", HAS_BOOLEAN_VALUE);
-        m.insert("download", HAS_OVERLOADED_BOOLEAN_VALUE);
-        m.insert("draggable", HAS_STRING_BOOLEAN_VALUE);
-        m.insert("formNoValidate", HAS_BOOLEAN_VALUE);
-        m.insert("hidden", HAS_BOOLEAN_VALUE);
-        m.insert("loop", HAS_BOOLEAN_VALUE);
-        m.insert("multiple", MUST_USE_PROPERTY | HAS_BOOLEAN_VALUE);
-        m.insert("muted", MUST_USE_PROPERTY | HAS_BOOLEAN_VALUE);
-        m.insert("noValidate", HAS_BOOLEAN_VALUE);
-        m.insert("open", HAS_BOOLEAN_VALUE);
-        m.insert("playsInline", HAS_BOOLEAN_VALUE);
-        m.insert("readOnly", HAS_BOOLEAN_VALUE);
-        m.insert("required", HAS_BOOLEAN_VALUE);
-        m.insert("reversed", HAS_BOOLEAN_VALUE);
-        m.insert("rows", HAS_POSITIVE_NUMERIC_VALUE);
-        m.insert("rowSpan", HAS_NUMERIC_VALUE);
-        m.insert("scoped", HAS_BOOLEAN_VALUE);
-        m.insert("seamless", HAS_BOOLEAN_VALUE);
-        m.insert("selected", MUST_USE_PROPERTY | HAS_BOOLEAN_VALUE);
-        m.insert("size", HAS_POSITIVE_NUMERIC_VALUE);
-        m.insert("start", HAS_NUMERIC_VALUE);
-        m.insert("span", HAS_POSITIVE_NUMERIC_VALUE);
-        m.insert("spellCheck", HAS_STRING_BOOLEAN_VALUE);
-        m.insert("style", 0);
-        m.insert("tabIndex", 0);
-        m.insert("itemScope", HAS_BOOLEAN_VALUE);
-        m.insert("acceptCharset", 0);
-        m.insert("className", 0);
-        m.insert("htmlFor", 0);
-        m.insert("httpEquiv", 0);
-        m.insert("value", HAS_STRING_BOOLEAN_VALUE);
-        m
+    pub static ref Properties: HashMap<&'static str, u32> = hashmap! {
+        "allowFullScreen" => HAS_BOOLEAN_VALUE,
+        "autoFocus"       => HAS_STRING_BOOLEAN_VALUE,
+        "async"           => HAS_BOOLEAN_VALUE,
+        "autoPlay"        => HAS_BOOLEAN_VALUE,
+        "capture"         => HAS_BOOLEAN_VALUE,
+        "checked"         => MUST_USE_PROPERTY | HAS_BOOLEAN_VALUE,
+        "cols"            => HAS_POSITIVE_NUMERIC_VALUE,
+        "contentEditable" => HAS_STRING_BOOLEAN_VALUE,
+        "controls"        => HAS_BOOLEAN_VALUE,
+        "default"         => HAS_BOOLEAN_VALUE,
+        "defer"           => HAS_BOOLEAN_VALUE,
+        "disabled"        => HAS_BOOLEAN_VALUE,
+        "download"        => HAS_OVERLOADED_BOOLEAN_VALUE,
+        "draggable"       => HAS_STRING_BOOLEAN_VALUE,
+        "formNoValidate"  => HAS_BOOLEAN_VALUE,
+        "hidden"          => HAS_BOOLEAN_VALUE,
+        "loop"            => HAS_BOOLEAN_VALUE,
+        "multiple"        => MUST_USE_PROPERTY | HAS_BOOLEAN_VALUE,
+        "muted"           => MUST_USE_PROPERTY | HAS_BOOLEAN_VALUE,
+        "noValidate"      => HAS_BOOLEAN_VALUE,
+        "open"            => HAS_BOOLEAN_VALUE,
+        "playsInline"     => HAS_BOOLEAN_VALUE,
+        "readOnly"        => HAS_BOOLEAN_VALUE,
+        "required"        => HAS_BOOLEAN_VALUE,
+        "reversed"        => HAS_BOOLEAN_VALUE,
+        "rows"            => HAS_POSITIVE_NUMERIC_VALUE,
+        "rowSpan"         => HAS_NUMERIC_VALUE,
+        "scoped"          => HAS_BOOLEAN_VALUE,
+        "seamless"        => HAS_BOOLEAN_VALUE,
+        "selected"        => MUST_USE_PROPERTY | HAS_BOOLEAN_VALUE,
+        "size"            => HAS_POSITIVE_NUMERIC_VALUE,
+        "start"           => HAS_NUMERIC_VALUE,
+        "span"            => HAS_POSITIVE_NUMERIC_VALUE,
+        "spellCheck"      => HAS_STRING_BOOLEAN_VALUE,
+        "style"           => 0,
+        "tabIndex"        => 0,
+        "itemScope"       => HAS_BOOLEAN_VALUE,
+        "acceptCharset"   => 0,
+        "className"       => 0,
+        "htmlFor"         => 0,
+        "httpEquiv"       => 0,
+        "value"           => HAS_STRING_BOOLEAN_VALUE,
     };
 
-    static ref DOMAttributeNames:  HashMap<&'static str, &'static str> = {
-        let mut m = HashMap::new();
-        m.insert("acceptCharset", "accept-charset");
-        m.insert("className", "class");
-        m.insert("htmlFor", "for");
-        m.insert("httpEquiv", "http-equiv");
-        m
+    pub static ref DOMAttributeNames:  HashMap<&'static str, &'static str> = hashmap! {
+        "acceptCharset" => "accept-charset",
+        "className"     => "class",
+        "htmlFor"       => "for",
+        "httpEquiv"     => "http-equiv",
     };
 }
-

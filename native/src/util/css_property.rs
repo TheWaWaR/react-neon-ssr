@@ -7,12 +7,12 @@ use std::collections::HashSet;
  * Support style names that may come passed in prefixed by adding permutations
  * of vendor prefixes.
  */
-const CSSPrefixes: [&str; 4] = ["Webkit", "ms", "Moz", "O"];
+pub const CSSPrefixes: [&str; 4] = ["Webkit", "ms", "Moz", "O"];
 lazy_static! {
     /**
      * CSS properties which accept numbers but are not in units of "px".
      */
-    static ref isUnitlessNumber: HashSet<&'static str> = hashset!{
+    pub static ref isUnitlessNumber: HashSet<&'static str> = hashset!{
         "animationIterationCount",
         "borderImageOutset",
         "borderImageSlice",
