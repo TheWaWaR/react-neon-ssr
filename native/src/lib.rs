@@ -5,6 +5,7 @@ extern crate neon_runtime;
 extern crate lazy_static;
 #[macro_use]
 extern crate maplit;
+extern crate regex;
 
 mod dom_string_renderer;
 mod partial_renderer;

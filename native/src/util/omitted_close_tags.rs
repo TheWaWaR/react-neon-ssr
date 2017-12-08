@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 // react/packages/react-dom/src/shared/omittedCloseTags.js
 lazy_static! {
-    pub static ref omittedCloseTags: HashSet<&'static str> = hashset!{
+    pub static ref OMITTED_CLOSE_TAGS: HashSet<&'static str> = hashset!{
         "area",
         "base",
         "br",
@@ -20,8 +20,8 @@ lazy_static! {
         "wbr",
     };
 
-    pub static ref voidElementTags: HashSet<&'static str> = {
-        let mut m = omittedCloseTags.clone();
+    pub static ref VOID_ELEMENT_TAGS: HashSet<&'static str> = {
+        let mut m = OMITTED_CLOSE_TAGS.clone();
         m.insert("menuitem");
         m
     };

@@ -22,7 +22,8 @@ use neon::js::{
     JsValue,
 };
 
-use util::omitted_close_tags::omittedCloseTags;
+use util::dom_property::PROPERTIES;
+use util::omitted_close_tags::OMITTED_CLOSE_TAGS;
 use partial_renderer::{ReadSize, DomServerRenderer};
 
 
@@ -104,7 +105,7 @@ fn render_type(
         let tag = to_string(scope, type_obj);
         let mut header = format!("{}<{}", prefix, tag);
         let mut footer = String::new();
-        if omittedCloseTags.contains(tag.as_str()) {
+        if OMITTED_CLOSE_TAGS.contains(tag.as_str()) {
             header.push_str("/>");
             header.push_str("\n");
         } else {
