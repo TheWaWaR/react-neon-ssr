@@ -54,26 +54,47 @@ fn get_children(scope: &mut RootScope, props: Local) -> Vec<JsValue> {
     let children_raw = get_raw(scope, props, "children");
     let val = JsValue::from_raw(children_raw).as_value(scope);
     let mut children = Vec::new();
-    if val.is_a::<JsString>() {
-        children.push(*val);
-    } else if val.is_a::<JsArray>() {
-        for v1 in JsArray::from_raw(val.to_raw()).to_vec(scope).unwrap() {
-            if v1.is_a::<JsArray>() {
+    if val.is_a::<JsArray>() {
+        for inner_val in JsArray::from_raw(val.to_raw()).to_vec(scope).unwrap() {
+            if inner_val.is_a::<JsArray>() {
                 children.extend(
-                    JsArray::from_raw(v1.to_raw())
+                    JsArray::from_raw(inner_val.to_raw())
                         .to_vec(scope)
                         .unwrap()
                         .iter()
                         .map(|v| v.deref())
                 );
+            } else if inner_val.is_a::<JsObject>()
+                || inner_val.is_a::<JsString>()
+                || inner_val.is_a::<JsNumber>()
+            {
+                children.push(*inner_val);
+            } else if inner_val.is_a::<JsUndefined>()
+                || inner_val.is_a::<JsNull>()
+                || inner_val.is_a::<JsBoolean>()
+            {
             } else {
-                children.push(*v1);
+                println!(
+                    "[WARN]: Inner Children={}",
+                    to_string(scope, JsValue::from_raw(inner_val.to_raw()))
+                );
+                // panic!("Unexpected children type");
             }
         }
-    // } else if val.is_a::<JsUndefined>() {
-    // } else if val.is_a::<JsNull>() {
+    } else if val.is_a::<JsObject>()
+        || val.is_a::<JsString>()
+        || val.is_a::<JsNumber>()
+    {
+        children.push(*val);
+    } else if val.is_a::<JsUndefined>()
+        || val.is_a::<JsNull>()
+        || val.is_a::<JsBoolean>()
+    {
     } else {
-        println!("Children: {}", to_string(scope, JsValue::from_raw(children_raw)));
+        println!(
+            "[WARN]: Children={}",
+            to_string(scope, JsValue::from_raw(children_raw))
+        );
         // panic!("Unexpected children type");
     }
     children
