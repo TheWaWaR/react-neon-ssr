@@ -150,11 +150,8 @@ fn render_type(
     html: &mut String,
     scope: &mut RootScope,
     component: Local,
-    level: usize
+    static_markup: bool,
 ) {
-    let prefix = std::iter::repeat("  ")
-        .take(level)
-        .collect::<String>();
     let type_raw = get_raw(scope, component, "type");
     let type_obj = JsObject::from_raw(type_raw);
     // println!(">>> type={}", to_string(scope, type_obj));
@@ -174,19 +171,29 @@ fn render_type(
             .call(scope, this, vec![obj])
             .unwrap();
         // println!(">>> rendered_component={}", to_string(scope, *rendered_component));
-        render_type(html, scope, rendered_component.deref().to_raw(), level);
+        render_type(html, scope, rendered_component.deref().to_raw(), static_markup);
     } else if type_val.is_a::<JsString>() {
-        let tag = to_string(scope, type_obj);
-        let mut header = format!("{}<{}", prefix, tag);
+        let type_str = to_string(scope, type_obj);
+        let tag = type_str.to_lowercase();
+
+        let mut header = create_open_tag_markup(
+            scope,
+            type_str.as_str(),
+            tag.as_str(),
+            props,
+            "",
+            static_markup,
+            false
+        );
         let mut footer = String::new();
         if OMITTED_CLOSE_TAGS.contains(tag.as_str()) {
             header.push_str("/>");
-            header.push_str("\n");
+            // header.push_str("\n");
         } else {
             header.push_str(">");
-            header.push_str("\n");
-            footer = format!("{}</{}>", prefix, tag);
-            footer.push_str("\n");
+            // header.push_str("\n");
+            footer = format!("</{}>", type_str);
+            // footer.push_str("\n");
         }
         html.push_str(header.as_str());
         let children = get_children(scope, props.to_raw());
@@ -196,11 +203,11 @@ fn render_type(
                 || child_val.is_a::<JsNumber>()
                 || child_val.is_a::<JsBoolean>()
             {
-                let mut content = format!("{}  {}", prefix, to_string(scope, child));
-                content.push_str("\n");
+                let mut content = to_string(scope, child);
+                // content.push_str("\n");
                 html.push_str(content.as_str());
             } else if child_val.is_a::<JsObject>() {
-                render_type(html, scope, child.to_raw(), level+1);
+                render_type(html, scope, child.to_raw(), static_markup);
             } else {
                 println!(">>> child={}", to_string(scope, child));
                 panic!("Invalid child type");
@@ -245,7 +252,7 @@ impl<'a> DomServerRenderer<'a> {
             .get(self.call.scope, 0)
             .unwrap()
             .to_raw();
-        render_type(&mut html, self.call.scope, component, 0);
+        render_type(&mut html, self.call.scope, component, self.static_markup);
         Some(html)
     }
 }
