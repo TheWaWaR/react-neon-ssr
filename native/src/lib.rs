@@ -7,6 +7,7 @@ extern crate lazy_static;
 extern crate maplit;
 extern crate regex;
 
+mod dom_markup_operations;
 mod dom_string_renderer;
 mod partial_renderer;
 mod util;

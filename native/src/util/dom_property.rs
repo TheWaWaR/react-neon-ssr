@@ -68,22 +68,22 @@ lazy_static! {
 }
 
 pub struct PropertyInfo {
-    attribute_name: String,
-    attribute_namespace: Option<&'static str>,
-    property_name: String,
+    pub attribute_name: String,
+    pub attribute_namespace: Option<&'static str>,
+    pub property_name: String,
     // -- NOTE: Seems only used by: client/DOMPropertyOperations.js
     // --       Which is client side!
     // mutationMethod: Option<String>,
 
-    must_use_property: bool,
-    has_boolean_value: bool,
-    has_numeric_value: bool,
-    has_positive_numeric_value: bool,
-    has_overloaded_boolean_value: bool,
-    has_string_boolean_value: bool,
+    pub must_use_property: bool,
+    pub has_boolean_value: bool,
+    pub has_numeric_value: bool,
+    pub has_positive_numeric_value: bool,
+    pub has_overloaded_boolean_value: bool,
+    pub has_string_boolean_value: bool,
 }
 
-pub struct DOMPropertyConfig {
+struct DOMPropertyConfig {
     properties: HashMap<String, u32>,
     dom_attribute_namespaces: HashMap<&'static str, &'static str>,
     dom_attribute_names: HashMap<String, &'static str>,
@@ -93,7 +93,7 @@ pub struct DOMPropertyConfig {
     // DOMMutationMethods: (),
 }
 
-pub fn inject_dom_property_config(
+fn inject_dom_property_config(
     props: &mut HashMap<String, PropertyInfo>,
     config: &DOMPropertyConfig,
 ) {

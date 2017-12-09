@@ -10,10 +10,10 @@ pub mod dom_namespaces;
 pub mod html_node_type;
 pub mod escape_text_content_for_browser;
 pub mod quote_attribute_value_for_browser;
-pub mod is_customer_component;
+pub mod is_custom_component;
 
 pub use self::dangerous_style_value::dangerous_style_value;
-pub use self::is_customer_component::is_customer_component;
+pub use self::is_custom_component::is_custom_component;
 pub use self::css_property_operations::{
     create_dangerous_string_for_styles,
     set_value_for_styles,
@@ -24,7 +24,6 @@ pub use self::dom_namespaces::{
 };
 pub use self::css_property::prefix_key;
 pub use self::dom_property::{
-    inject_dom_property_config,
     check_mask,
     should_set_attribute,
     get_property_info,

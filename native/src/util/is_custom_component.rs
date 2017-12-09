@@ -21,7 +21,7 @@ lazy_static! {
     };
 }
 
-pub fn is_customer_component(tag_name: &str, props: Handle<JsValue>) -> bool {
+pub fn is_custom_component(tag_name: &str, props: Handle<JsValue>) -> bool {
     if !tag_name.contains("-") {
         return props.is_a::<JsString>()
     }
