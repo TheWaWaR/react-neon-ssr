@@ -22,33 +22,16 @@ use neon::js::{
     JsValue,
 };
 
+use util::{
+    get_raw,
+    get_obj,
+    get_fn,
+    to_string,
+};
 use util::dom_property::PROPERTIES;
 use util::omitted_close_tags::OMITTED_CLOSE_TAGS;
 use partial_renderer::{ReadSize, DomServerRenderer};
 
-
-fn get_raw(scope: &mut RootScope, obj: Local, key: &str) -> Local {
-    JsObject::from_raw(obj)
-        .get(scope, key)
-        .unwrap()
-        .deref()
-        .to_raw()
-}
-
-fn get_obj(scope: &mut RootScope, obj: Local, key: &str) -> JsObject {
-    JsObject::from_raw(get_raw(scope, obj, key))
-}
-
-fn get_fn(scope: &mut RootScope, obj: Local, key: &str) -> JsFunction {
-    JsFunction::<JsObject>::from_raw(get_raw(scope, obj, key))
-}
-
-fn to_string<T: Value>(scope: &mut RootScope, obj: T) -> String {
-    obj.to_string(scope)
-        .unwrap()
-        .deref()
-        .value()
-}
 
 fn get_children(scope: &mut RootScope, props: Local) -> Vec<JsValue> {
     let children_raw = get_raw(scope, props, "children");

@@ -30,7 +30,7 @@ pub fn escape_html(text: &str) -> String {
 }
 
 pub fn escape_text_content_for_browser(
-    obj: Handle<JsValue>, scope: &mut RootScope,
+    scope: &mut RootScope, obj: Handle<JsValue>,
 ) -> String {
     let text = obj
         .to_string(scope)

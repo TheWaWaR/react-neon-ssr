@@ -14,7 +14,7 @@ lazy_static! {
     };
 }
 
-fn get_intrinsic_namespace(t: &str) -> &'static str {
+pub fn get_intrinsic_namespace(t: &str) -> &'static str {
     match t {
         "svg" => SVG_NAMESPACE,
         "math" => MATH_NAMESPACE,
@@ -22,7 +22,7 @@ fn get_intrinsic_namespace(t: &str) -> &'static str {
     }
 }
 
-fn get_child_namespace<'a>(parent: Option<&'a str>, t: &str) -> &'a str {
+pub fn get_child_namespace<'a>(parent: Option<&'a str>, t: &str) -> &'a str {
     if parent.is_none() || parent == Some(HTML_NAMESPACE) {
         return get_intrinsic_namespace(t);
     }

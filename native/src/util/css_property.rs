@@ -71,7 +71,7 @@ lazy_static! {
     };
 }
 
-fn prefix_key(prefix: &str, key: &str) -> String {
+pub fn prefix_key(prefix: &str, key: &str) -> String {
     let mut c = key.chars();
     let new_key = match c.next() {
         None => String::new(),
