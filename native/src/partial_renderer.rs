@@ -28,6 +28,7 @@ use util::{
     get_fn,
     to_string,
     is_custom_component,
+    escape_text_content_for_browser,
 };
 use util::dom_property::PROPERTIES;
 use util::omitted_close_tags::OMITTED_CLOSE_TAGS;
@@ -69,6 +70,11 @@ fn get_children(scope: &mut RootScope, props: Local) -> Vec<JsValue> {
                 children.push(*v1);
             }
         }
+    // } else if val.is_a::<JsUndefined>() {
+    // } else if val.is_a::<JsNull>() {
+    } else {
+        println!("Children: {}", to_string(scope, JsValue::from_raw(children_raw)));
+        // panic!("Unexpected children type");
     }
     children
 }
@@ -77,6 +83,28 @@ fn create_markup_for_styles(
     scope: &mut RootScope,
     styles: Handle<JsValue>,
 ) -> Option<String> {
+    None
+}
+
+fn get_non_children_inner_markup(
+    scope: &mut RootScope,
+    props: Local,
+    children: &Vec<JsValue>,
+) -> Option<String> {
+    let inner_html = get_raw(scope, props, "dangerouslySetInnerHTML");
+    if JsValue::from_raw(inner_html).as_value(scope).is_a::<JsObject>() {
+        let the_html = get_raw(scope, inner_html, "__html");
+        if !JsValue::from_raw(the_html).as_value(scope).is_a::<JsNull>() {
+            return Some(to_string(scope, JsValue::from_raw(the_html)));
+        }
+    } else {
+        if children.len() == 1 {
+            let content: Handle<JsValue> = children[0].as_value(scope);
+            if content.is_a::<JsString>() || content.is_a::<JsNumber>() {
+                return Some(escape_text_content_for_browser(scope, content));
+            }
+        }
+    }
     None
 }
 
@@ -151,27 +179,24 @@ fn render_type(
     scope: &mut RootScope,
     component: Local,
     static_markup: bool,
+    level: u32,
 ) {
     let type_raw = get_raw(scope, component, "type");
     let type_obj = JsObject::from_raw(type_raw);
-    // println!(">>> type={}", to_string(scope, type_obj));
     let props = get_obj(scope, component, "props");
-    // println!(">>> props={}", to_string(scope, props));
     let type_val = type_obj.as_value(scope);
     if type_val.is_a::<JsFunction>() {
         let props = props.as_value(scope);
         let instance: Handle<JsObject> = JsFunction::from_raw(type_raw)
             .construct(scope, vec![props])
             .unwrap();
-        // println!(">>> instance={}", to_string(scope, *instance));
         let render_fn = get_fn(scope, instance.to_raw(), "render");
         let this = instance.as_value(scope);
         let obj = JsObject::from_raw(instance.to_raw()).as_value(scope);
         let rendered_component = render_fn
             .call(scope, this, vec![obj])
             .unwrap();
-        // println!(">>> rendered_component={}", to_string(scope, *rendered_component));
-        render_type(html, scope, rendered_component.deref().to_raw(), static_markup);
+        render_type(html, scope, rendered_component.deref().to_raw(), static_markup, level+1);
     } else if type_val.is_a::<JsString>() {
         let type_str = to_string(scope, type_obj);
         let tag = type_str.to_lowercase();
@@ -183,36 +208,38 @@ fn render_type(
             props,
             "",
             static_markup,
-            false
+            level == 0,
         );
         let mut footer = String::new();
         if OMITTED_CLOSE_TAGS.contains(tag.as_str()) {
             header.push_str("/>");
-            // header.push_str("\n");
         } else {
             header.push_str(">");
-            // header.push_str("\n");
             footer = format!("</{}>", type_str);
-            // footer.push_str("\n");
         }
         html.push_str(header.as_str());
         let children = get_children(scope, props.to_raw());
-        for child in children {
-            let child_val = child.as_value(scope);
-            if child_val.is_a::<JsString>()
-                || child_val.is_a::<JsNumber>()
-                || child_val.is_a::<JsBoolean>()
-            {
-                let mut content = to_string(scope, child);
-                // content.push_str("\n");
-                html.push_str(content.as_str());
-            } else if child_val.is_a::<JsObject>() {
-                render_type(html, scope, child.to_raw(), static_markup);
-            } else {
-                println!(">>> child={}", to_string(scope, child));
-                panic!("Invalid child type");
+        if let Some(content) = get_non_children_inner_markup(
+            scope, props.to_raw(), &children
+        ) {
+            html.push_str(content.as_str());
+        } else {
+            for child in children {
+                let child_val = child.as_value(scope);
+                if child_val.is_a::<JsString>()
+                    || child_val.is_a::<JsNumber>()
+                    || child_val.is_a::<JsBoolean>()
+                {
+                    let mut content = to_string(scope, child);
+                    html.push_str(content.as_str());
+                } else if child_val.is_a::<JsObject>() {
+                    render_type(html, scope, child.to_raw(), static_markup, level+1);
+                } else {
+                    println!(">>> child={}", to_string(scope, child));
+                    panic!("Invalid child type");
+                }
             }
-        }
+        };
         html.push_str(footer.as_str());
     } else {
         if JsValue::from_raw(component).as_value(scope).is_a::<JsArray>() {
@@ -252,7 +279,7 @@ impl<'a> DomServerRenderer<'a> {
             .get(self.call.scope, 0)
             .unwrap()
             .to_raw();
-        render_type(&mut html, self.call.scope, component, self.static_markup);
+        render_type(&mut html, self.call.scope, component, self.static_markup, 0);
         Some(html)
     }
 }
