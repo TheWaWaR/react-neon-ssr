@@ -1,6 +1,7 @@
 use std;
 use std::ops::Deref;
-use std::collections::HashSet;
+use std::sync::{Arc, Mutex};
+use std::collections::{HashSet, HashMap};
 
 use neon_runtime::raw::Local;
 use neon::scope::{RootScope, Scope};
@@ -27,8 +28,11 @@ use util::{
     get_obj,
     get_fn,
     to_string,
+    hyphenate_style_name,
+
     is_custom_component,
     escape_text_content_for_browser,
+    dangerous_style_value,
 };
 use util::dom_property::PROPERTIES;
 use util::omitted_close_tags::OMITTED_CLOSE_TAGS;
@@ -46,6 +50,9 @@ lazy_static! {
         "dangerouslySetInnerHTML",
         "suppressContentEditableWarning",
         "suppressHydrationWarning",
+    };
+    static ref STYLE_NAME_CACHE: Arc<Mutex<HashMap<String, String>>> = {
+        Arc::new(Mutex::new(HashMap::new()))
     };
 }
 
@@ -100,11 +107,49 @@ fn get_children(scope: &mut RootScope, props: Local) -> Vec<JsValue> {
     children
 }
 
+fn process_style_name(name: &str) -> String {
+    let mut cache = STYLE_NAME_CACHE.lock().unwrap();
+    if !cache.contains_key(name) {
+        cache.insert(name.to_string(), hyphenate_style_name(name));
+    }
+    cache.get(name).map(|s| s.clone()).unwrap()
+}
+
 fn create_markup_for_styles(
     scope: &mut RootScope,
     styles: Handle<JsValue>,
 ) -> Option<String> {
-    None
+    let mut serialized = String::new();
+    let mut is_first = true;
+    let own_property_names = styles.downcast::<JsObject>()
+        .unwrap()
+        .get_own_property_names(scope)
+        .unwrap()
+        .to_vec(scope)
+        .unwrap();
+    for style_name in own_property_names {
+        let style_name = style_name
+            .downcast::<JsString>()
+            .unwrap()
+            .value();
+        let is_custom_property = style_name.starts_with("--");
+        let style_value = get_raw(
+            scope, styles.to_raw(), style_name.as_str()
+        );
+        let style_value_handle = JsValue::from_raw(style_value).as_value(scope);
+        if !style_value_handle.is_a::<JsNull>() {
+            let delimiter = if is_first {""} else {";"};
+            let name = process_style_name(style_name.as_str());
+            let value = dangerous_style_value(
+                style_name.as_str(),
+                style_value_handle,
+                is_custom_property,
+            );
+            serialized.push_str(format!("{}{}:{}", delimiter, name, value).as_str());
+            is_first = false;
+        }
+    }
+    if serialized.len() > 0 { Some(serialized) } else { None }
 }
 
 fn get_non_children_inner_markup(
@@ -176,7 +221,7 @@ fn create_open_tag_markup(
         } else {
             markup = create_markup_for_property(
                 scope, prop_key.as_str(), prop_value
-            )
+            );
         }
         if let Some(markup) = markup {
             ret.push_str(format!(" {}", markup).as_str());
@@ -249,9 +294,8 @@ fn render_type(
                 let child_val = child.as_value(scope);
                 if child_val.is_a::<JsString>()
                     || child_val.is_a::<JsNumber>()
-                    || child_val.is_a::<JsBoolean>()
                 {
-                    let mut content = to_string(scope, child);
+                    let content = escape_text_content_for_browser(scope, child_val);
                     html.push_str(content.as_str());
                 } else if child_val.is_a::<JsObject>() {
                     render_type(html, scope, child.to_raw(), static_markup, level+1);

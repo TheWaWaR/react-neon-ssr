@@ -19,7 +19,12 @@ export default class Page extends Component {
       </a>
     );
     return (
-      <div>
+      <div style={{
+        fontSize: 13,
+        color: '#222',
+        someStrangeValueBetter: 'xxx',
+        msTransition: "opacity 1s ease-in-out"
+      }}>
         <p suppressHydrationWarning={true}>A random number: {Math.random()}</p>
         <p>Autofocus on page load: {autofocusedInputs}</p>
         <p>{!this.state.active ? link : 'Thanks!'}</p>

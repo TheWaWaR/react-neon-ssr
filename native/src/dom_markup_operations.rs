@@ -8,6 +8,7 @@ use neon::js::{
     JsValue,
     JsNull,
     JsBoolean,
+    JsNumber,
 };
 
 
@@ -21,7 +22,11 @@ use util::dom_property::{
     should_set_attribute,
 };
 use util::dom_property::PropertyInfo;
-use util::quote_attribute_value_for_browser;
+use util::{
+    not,
+    is_nan,
+    quote_attribute_value_for_browser
+};
 
 
 lazy_static! {
@@ -61,11 +66,16 @@ fn is_attribute_name_safe(attribute_name: &str) -> bool {
 // shouldIgnoreValue() is currently duplicated in DOMPropertyOperations.
 // TODO: Find a better place for this.
 fn should_ignore_value(
-    property_info: &PropertyInfo,
+    info: &PropertyInfo,
     value: Handle<JsValue>
 ) -> bool {
-    // TODO:FIXME:
-    false
+    value.is_a::<JsNull>()
+        || (info.has_boolean_value && not(value))
+        || (info.has_numeric_value && is_nan(value))
+        || (info.has_positive_numeric_value
+            && value.downcast::<JsNumber>().unwrap().value() < 1.0)
+        || (info.has_overloaded_boolean_value
+            && value.downcast::<JsBoolean>().unwrap().value() == false)
 }
 
 /**
