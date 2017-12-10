@@ -1,4 +1,5 @@
 use std;
+use std::time::Instant;
 use std::ops::Deref;
 use std::sync::{Arc, Mutex};
 use std::collections::{HashSet, HashMap};
@@ -43,6 +44,7 @@ use dom_markup_operations::{
 };
 
 const STYLE: &str = "style";
+const VALUE_PROP_NAMES: [&'static str; 2] = ["value", "defaultValue"];
 
 lazy_static! {
     static ref RESERVED_PROPS: HashSet<&'static str> = hashset! {
@@ -50,6 +52,9 @@ lazy_static! {
         "dangerouslySetInnerHTML",
         "suppressContentEditableWarning",
         "suppressHydrationWarning",
+    };
+    static ref NEWLINE_EATING_TAGS: HashSet<&'static str> = hashset! {
+        "listing", "pre", "textarea",
     };
     static ref STYLE_NAME_CACHE: Arc<Mutex<HashMap<String, String>>> = {
         Arc::new(Mutex::new(HashMap::new()))
@@ -240,19 +245,51 @@ fn create_open_tag_markup(
     ret
 }
 
+fn resolve(
+    scope: &mut RootScope,
+    child: Local,
+    context: JsObject
+) -> (Local, JsObject) {
+    let type_raw = get_raw(scope, child, "type");
+    let type_obj = JsObject::from_raw(type_raw);
+    let props = get_obj(scope, child, "props");
+    let type_val = type_obj.as_value(scope);
+    let mut rendered_component: Option<Local> = None;
+    if type_val.is_a::<JsFunction>() {
+        let props = props.as_value(scope);
+        let instance: Handle<JsObject> = JsFunction::from_raw(type_raw)
+            .construct(scope, vec![props])
+            .unwrap();
+        let render_fn = get_fn(scope, instance.to_raw(), "render");
+        let this = instance.as_value(scope);
+        let obj = JsObject::from_raw(instance.to_raw()).as_value(scope);
+        rendered_component = Some(
+            render_fn
+                .call(scope, this, vec![obj])
+                .unwrap()
+                .to_raw()
+        );
+    }
+    (rendered_component.unwrap(), context)
+}
+
 fn render_type(
     html: &mut String,
     scope: &mut RootScope,
     component: Local,
     static_markup: bool,
+    previous_was_text_node: bool,
     level: u32,
-) {
+) -> u64 {
+    let mut render_cost: u64 = 0;
+    let mut current_is_text_node = false;
     let type_raw = get_raw(scope, component, "type");
     let type_obj = JsObject::from_raw(type_raw);
     let props = get_obj(scope, component, "props");
     let type_val = type_obj.as_value(scope);
     if type_val.is_a::<JsFunction>() {
         let props = props.as_value(scope);
+        let now = Instant::now();
         let instance: Handle<JsObject> = JsFunction::from_raw(type_raw)
             .construct(scope, vec![props])
             .unwrap();
@@ -262,7 +299,17 @@ fn render_type(
         let rendered_component = render_fn
             .call(scope, this, vec![obj])
             .unwrap();
-        render_type(html, scope, rendered_component.deref().to_raw(), static_markup, level+1);
+        let t = now.elapsed();
+        let cost = t.as_secs() as u64 * 1000_000_000 + t.subsec_nanos() as u64;
+        render_cost += cost;
+        render_cost += render_type(
+            html,
+            scope,
+            rendered_component.deref().to_raw(),
+            static_markup,
+            current_is_text_node,
+            level+1
+        );
     } else if type_val.is_a::<JsString>() {
         let type_str = to_string(scope, type_obj);
         let tag = type_str.to_lowercase();
@@ -285,9 +332,15 @@ fn render_type(
         }
         html.push_str(header.as_str());
         let children = get_children(scope, props.to_raw());
+        // FIXME:
         if let Some(content) = get_non_children_inner_markup(
             scope, props.to_raw(), &children
         ) {
+            if NEWLINE_EATING_TAGS.contains(tag.as_str())
+                && content.chars().nth(0) == Some('\n')
+            {
+                html.push_str("\n");
+            }
             html.push_str(content.as_str());
         } else {
             for child in children {
@@ -296,9 +349,20 @@ fn render_type(
                     || child_val.is_a::<JsNumber>()
                 {
                     let content = escape_text_content_for_browser(scope, child_val);
+                    if previous_was_text_node {
+                        html.push_str("<!-- -->");
+                    }
                     html.push_str(content.as_str());
+                    current_is_text_node = true;
                 } else if child_val.is_a::<JsObject>() {
-                    render_type(html, scope, child.to_raw(), static_markup, level+1);
+                    render_cost += render_type(
+                        html,
+                        scope,
+                        child.to_raw(),
+                        static_markup,
+                        current_is_text_node,
+                        level+1
+                    );
                 } else {
                     println!(">>> child={}", to_string(scope, child));
                     panic!("Invalid child type");
@@ -319,6 +383,7 @@ fn render_type(
         }
         panic!("Invalid component type");
     }
+    render_cost
 }
 
 pub enum ReadSize {
@@ -344,7 +409,12 @@ impl<'a> DomServerRenderer<'a> {
             .get(self.call.scope, 0)
             .unwrap()
             .to_raw();
-        render_type(&mut html, self.call.scope, component, self.static_markup, 0);
+        let render_cost = render_type(
+            &mut html, self.call.scope, component, self.static_markup, false, 0
+        );
+        let cost_ms = render_cost / 1000_1000;
+        let cost_micros = render_cost / 1000;
+        println!("[Render cost]: {}.{}ms, {}ns", cost_ms, cost_micros, render_cost);
         Some(html)
     }
 }
