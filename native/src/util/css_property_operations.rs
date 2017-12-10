@@ -25,7 +25,10 @@ use util::dangerous_style_value::dangerous_style_value;
  * security checks so it's not safe to use this value for anything other than
  * comparison. It is only used in DEV for SSR validation.
  */
-pub fn create_dangerous_string_for_styles(scope: &mut RootScope, styles: JsObject) {
+pub fn create_dangerous_string_for_styles(
+    scope: &mut RootScope,
+    styles: JsObject
+) {
     // TODO
 }
 
@@ -37,7 +40,10 @@ pub fn create_dangerous_string_for_styles(scope: &mut RootScope, styles: JsObjec
  * @param {object} styles
  */
 pub fn set_value_for_styles(
-    scope: &mut RootScope, node: &mut JsObject, styles: JsObject, getStack: ()
+    scope: &mut RootScope,
+    node: &mut JsObject,
+    styles: JsObject,
+    getStack: ()
 ) {
     let style = get_obj(scope, node.to_raw(), "style");
     let own_property_names: Vec<Handle<JsValue>> = styles

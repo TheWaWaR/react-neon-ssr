@@ -40,10 +40,11 @@ pub use self::quote_attribute_value_for_browser::{
 
 
 use std::ops::{Deref, Index};
+use std::sync::{Arc, Mutex};
 
 use regex::{Regex, Captures};
 use neon_runtime::raw::Local;
-use neon::scope::{RootScope};
+use neon::scope::{RootScope, Scope};
 use neon::mem::{Handle, Managed};
 use neon::js::{Value, Object, Variant};
 use neon::js::{
@@ -57,9 +58,14 @@ use neon::js::{
 };
 
 
+const REACT_ELEMENT_TYPE_NUMBER: u32 = 0xeac7;
+
 lazy_static! {
     static ref UPPERCASE_PATTERN: Regex = Regex::new("([A-Z])").unwrap();
     static ref MS_PATTERN: Regex = Regex::new("^ms-").unwrap();
+    static ref REACT_ELEMENT_TYPE: Arc<Mutex<Option<String>>> = {
+        Arc::new(Mutex::new(None))
+    };
 }
 
 pub fn get_raw(scope: &mut RootScope, obj: Local, key: &str) -> Local {
@@ -78,12 +84,74 @@ pub fn get_fn(scope: &mut RootScope, obj: Local, key: &str) -> JsFunction {
     JsFunction::<JsObject>::from_raw(get_raw(scope, obj, key))
 }
 
-pub fn to_string<T: Value>(scope: &mut RootScope, obj: T) -> String {
+pub fn to_string<T: Value>(scope: &mut RootScope, obj: &T) -> String {
     obj.to_string(scope)
         .unwrap()
         .deref()
         .value()
 }
+
+// The Symbol used to tag the ReactElement type. If there is no native Symbol
+// nor polyfill, then a plain number is used for performance.
+// var REACT_ELEMENT_TYPE =
+//     (typeof Symbol === 'function' && Symbol.for && Symbol.for('react.element')) ||
+//     0xeac7;
+
+/**
+ * Verifies the object is a ReactElement.
+ * See https://reactjs.org/docs/react-api.html#isvalidelement
+ * @param {?object} object
+ * @return {boolean} True if `object` is a valid component.
+ * @final
+ */
+fn is_valid_element(scope: &mut RootScope, obj: Handle<JsObject>) -> bool {
+    // function isValidElement(object) {
+    //     return (
+    //         typeof object === 'object' &&
+    //             object !== null &&
+    //             object.$$typeof === REACT_ELEMENT_TYPE
+    //     );
+    // }
+    let mut react_element_type = REACT_ELEMENT_TYPE.lock().unwrap();
+    if react_element_type.is_none() {
+        let mut value = String::new();
+        let global = scope.global();
+        let symbol = global
+            .get(scope, "Symbol")
+            .unwrap();
+        if symbol.is_a::<JsFunction>() {
+            let symbol_for = get_fn(scope, symbol.to_raw(), "for");
+            let this = symbol_for.as_value(scope);
+            let argument = JsString::new(scope, "react.element").unwrap();
+            value = symbol_for
+                .call(scope, this, vec![argument])
+                .unwrap()
+                .to_string(scope)
+                .unwrap()
+                .value();
+        }
+        react_element_type.get_or_insert(value);
+    }
+    if obj.is_a::<JsObject>() && !obj.is_a::<JsNull>() {
+        match JsObject
+            ::from_raw(obj.to_raw())
+            .get(scope, "$$typeof")
+            .unwrap()
+            .variant()
+        {
+            Variant::Number(number) => {
+                number.value() as u32 == REACT_ELEMENT_TYPE_NUMBER
+            },
+            Variant::String(s) => {
+                Some(s.value()) == *react_element_type
+            }
+            _ => false
+        }
+    } else {
+        false
+    }
+}
+
 
 pub fn not(value: Handle<JsValue>) -> bool {
     // undefined

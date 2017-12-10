@@ -1,9 +1,9 @@
-use std;
 use std::time::Instant;
 use std::ops::Deref;
 use std::sync::{Arc, Mutex};
 use std::collections::{HashSet, HashMap};
 
+use regex::{Regex, Captures};
 use neon_runtime::raw::Local;
 use neon::scope::{RootScope, Scope};
 use neon::vm::{This, Call, JsResult};
@@ -11,7 +11,7 @@ use neon::mem::{
     Managed, Handle
 };
 use neon::js::class::{Class, JsClass};
-use neon::js::{Value, Object};
+use neon::js::{Value, Variant, Object};
 use neon::js::{
     JsArray,
     JsBoolean,
@@ -25,6 +25,7 @@ use neon::js::{
 };
 
 use util::{
+    not,
     get_raw,
     get_obj,
     get_fn,
@@ -59,6 +60,15 @@ lazy_static! {
     static ref STYLE_NAME_CACHE: Arc<Mutex<HashMap<String, String>>> = {
         Arc::new(Mutex::new(HashMap::new()))
     };
+    // We accept any tag to be rendered but since this gets injected into arbitrary
+    // HTML, we want to make sure that it's a safe tag.
+    // http://www.w3.org/TR/REC-xml/#NT-Name
+    static ref VALID_TAG_REGEX: Regex = {
+        Regex::new(r#"^[a-zA-Z][a-zA-Z:_\.\-\d]*$"#).unwrap() // Simplified subset
+    };
+    static ref VALIDATED_TAG_CACHE: Arc<Mutex<HashSet<String>>> = {
+        Arc::new(Mutex::new(HashSet::new()))
+    };
 }
 
 
@@ -66,6 +76,7 @@ fn get_children(scope: &mut RootScope, props: Local) -> Vec<JsValue> {
     let children_raw = get_raw(scope, props, "children");
     let val = JsValue::from_raw(children_raw).as_value(scope);
     let mut children = Vec::new();
+    // NOTE: Can not use variant() here, beacuse a JsArray is also a JsObject.
     if val.is_a::<JsArray>() {
         for inner_val in JsArray::from_raw(val.to_raw()).to_vec(scope).unwrap() {
             if inner_val.is_a::<JsArray>() {
@@ -88,7 +99,7 @@ fn get_children(scope: &mut RootScope, props: Local) -> Vec<JsValue> {
             } else {
                 println!(
                     "[WARN]: Inner Children={}",
-                    to_string(scope, JsValue::from_raw(inner_val.to_raw()))
+                    to_string(scope, &JsValue::from_raw(inner_val.to_raw()))
                 );
                 // panic!("Unexpected children type");
             }
@@ -105,11 +116,69 @@ fn get_children(scope: &mut RootScope, props: Local) -> Vec<JsValue> {
     } else {
         println!(
             "[WARN]: Children={}",
-            to_string(scope, JsValue::from_raw(children_raw))
+            to_string(scope, &JsValue::from_raw(children_raw))
         );
         // panic!("Unexpected children type");
     }
     children
+}
+
+fn validate_dangerous_tag(tag: &str) {
+    let mut cache = VALIDATED_TAG_CACHE.lock().unwrap();
+    if !cache.contains(tag) {
+        debug_assert!(
+            VALID_TAG_REGEX.is_match(tag),
+            format!("Invalid tag: {}", tag)
+        );
+        cache.insert(tag.to_string());
+    }
+}
+
+fn should_construct(
+    scope: &mut RootScope,
+    component: &Handle<JsValue>
+) -> bool {
+    let prototype = JsObject
+        ::from_raw(component.to_raw())
+        .get(scope, "prototype")
+        .unwrap();
+    if prototype.is_a::<JsObject>() {
+        let is_react_component = JsObject
+            ::from_raw(prototype.to_raw())
+            .get(scope, "isReactComponent")
+            .unwrap();
+        !not(is_react_component)
+    } else {
+        false
+    }
+}
+
+fn get_component_name(
+    scope: &mut RootScope,
+    type_val: Handle<JsValue>
+) -> Option<String> {
+    match type_val.variant() {
+        Variant::String(s) => Some(s.value()),
+        Variant::Function(f) => {
+            let f_obj = JsObject::from_raw(f.to_raw());
+            let display_name = f_obj
+                .get(scope, "displayName")
+                .unwrap();
+            if display_name.is_a::<JsString>() {
+                Some(to_string(scope, display_name.deref()))
+            } else {
+                let name = f_obj
+                    .get(scope, "name")
+                    .unwrap();
+                if name.is_a::<JsString>() {
+                    Some(to_string(scope, name.deref()))
+                } else {
+                    None
+                }
+            }
+        },
+        _ => None
+    }
 }
 
 fn process_style_name(name: &str) -> String {
@@ -166,7 +235,7 @@ fn get_non_children_inner_markup(
     if JsValue::from_raw(inner_html).as_value(scope).is_a::<JsObject>() {
         let the_html = get_raw(scope, inner_html, "__html");
         if !JsValue::from_raw(the_html).as_value(scope).is_a::<JsNull>() {
-            return Some(to_string(scope, JsValue::from_raw(the_html)));
+            return Some(to_string(scope, &JsValue::from_raw(the_html)));
         }
     } else {
         if children.len() == 1 {
@@ -311,7 +380,7 @@ fn render_type(
             level+1
         );
     } else if type_val.is_a::<JsString>() {
-        let type_str = to_string(scope, type_obj);
+        let type_str = to_string(scope, &type_obj);
         let tag = type_str.to_lowercase();
 
         let mut header = create_open_tag_markup(
@@ -364,7 +433,7 @@ fn render_type(
                         level+1
                     );
                 } else {
-                    println!(">>> child={}", to_string(scope, child));
+                    println!(">>> child={}", to_string(scope, &child));
                     panic!("Invalid child type");
                 }
             }
@@ -374,12 +443,12 @@ fn render_type(
         if JsValue::from_raw(component).as_value(scope).is_a::<JsArray>() {
             println!("component is a JsArray");
         }
-        println!(">>> component={}", to_string(scope, JsObject::from_raw(component)));
-        println!(">>> type={}", to_string(scope, type_obj));
-        println!(">>> props={}", to_string(scope, props));
+        println!(">>> component={}", to_string(scope, &JsObject::from_raw(component)));
+        println!(">>> type={}", to_string(scope, &type_obj));
+        println!(">>> props={}", to_string(scope, &props));
         let children = get_children(scope, props.to_raw());
         for child in children {
-            println!(">>> child={}", to_string(scope, child));
+            println!(">>> child={}", to_string(scope, &child));
         }
         panic!("Invalid component type");
     }

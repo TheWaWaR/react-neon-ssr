@@ -50,17 +50,17 @@ lazy_static! {
         inject_dom_property_config(
             &mut m,
             &DOMPropertyConfig {
-                properties: html_config::PROPERTIES.clone(),
-                dom_attribute_namespaces: HashMap::new(),
-                dom_attribute_names: html_config::DOM_ATTRIBUTE_NAMES.clone(),
+                properties: &html_config::PROPERTIES,
+                dom_attribute_namespaces: &HashMap::new(),
+                dom_attribute_names: &html_config::DOM_ATTRIBUTE_NAMES,
             }
         );
         inject_dom_property_config(
             &mut m,
             &DOMPropertyConfig {
-                properties: svg_config::PROPERTIES.clone(),
-                dom_attribute_namespaces: svg_config::DOM_ATTRIBUTE_NAMESPACES.clone(),
-                dom_attribute_names: svg_config::DOM_ATTRIBUTE_NAMES.clone(),
+                properties: &svg_config::PROPERTIES,
+                dom_attribute_namespaces: &svg_config::DOM_ATTRIBUTE_NAMESPACES,
+                dom_attribute_names: &svg_config::DOM_ATTRIBUTE_NAMES,
             }
         );
         m
@@ -83,10 +83,10 @@ pub struct PropertyInfo {
     pub has_string_boolean_value: bool,
 }
 
-struct DOMPropertyConfig {
-    properties: HashMap<String, u32>,
-    dom_attribute_namespaces: HashMap<&'static str, &'static str>,
-    dom_attribute_names: HashMap<String, &'static str>,
+struct DOMPropertyConfig<'a> {
+    properties: &'a HashMap<String, u32>,
+    dom_attribute_namespaces: &'a HashMap<&'static str, &'static str>,
+    dom_attribute_names: &'a HashMap<String, &'static str>,
 
     // -- NOTE: Seems only used by: client/DOMPropertyOperations.js
     // --       Which is client side!
@@ -97,7 +97,7 @@ fn inject_dom_property_config(
     props: &mut HashMap<String, PropertyInfo>,
     config: &DOMPropertyConfig,
 ) {
-    for (prop_name, prop_config) in &(config.properties) {
+    for (prop_name, prop_config) in config.properties {
         debug_assert!(
             !props.contains_key(prop_name.as_str()),
             r##"injectDOMPropertyConfig(...): You're trying to inject DOM property
