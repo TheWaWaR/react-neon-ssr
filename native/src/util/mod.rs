@@ -6,6 +6,7 @@ pub mod html_dom_property_config;
 pub mod svg_dom_property_config;
 pub mod dom_property;
 pub mod omitted_close_tags;
+pub mod void_element_tags;
 pub mod dom_namespaces;
 pub mod html_node_type;
 pub mod escape_text_content_for_browser;
@@ -39,6 +40,7 @@ pub use self::quote_attribute_value_for_browser::{
 };
 
 
+use std::time::Duration;
 use std::ops::{Deref, Index};
 use std::sync::{Arc, Mutex};
 
@@ -66,6 +68,20 @@ lazy_static! {
     static ref REACT_ELEMENT_TYPE: Arc<Mutex<Option<String>>> = {
         Arc::new(Mutex::new(None))
     };
+}
+
+pub fn duration_str(value: Duration) -> String {
+    let seconds = value.as_secs();
+    let ns = value.subsec_nanos();
+    let ms = ns as f64 / 1000_000.0;
+    let mut s = String::new();
+    if seconds > 0 {
+        s.push_str(format!("{}s", seconds).as_str());
+    }
+    if ms > 0.0 {
+        s.push_str(format!("{:.3}ms", ms).as_str());
+    }
+    s
 }
 
 pub fn get_raw(scope: &mut RootScope, obj: Local, key: &str) -> Local {
@@ -154,11 +170,12 @@ fn is_valid_element(scope: &mut RootScope, obj: Handle<JsObject>) -> bool {
 
 
 pub fn not(value: Handle<JsValue>) -> bool {
-    // undefined
-    // null
-    // NaN
-    // 0
-    // Empty String ("")
+    // [MDN]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Logical_Operators
+    //   * undefined
+    //   * null
+    //   * NaN
+    //   * 0
+    //   * Empty String ("")
 
     // ::FIXME: May have bug
     match value.variant() {
@@ -218,3 +235,4 @@ pub fn hyphenate_style_name(value: &str) -> String {
         "-ms-".to_string()
     }).to_string()
 }
+

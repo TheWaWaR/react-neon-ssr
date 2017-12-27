@@ -1,4 +1,5 @@
-use std::time::Instant;
+use std::cmp::{PartialOrd, Ordering};
+use std::time::{Instant, Duration};
 use std::ops::Deref;
 use std::sync::{Arc, Mutex};
 use std::collections::{HashSet, HashMap};
@@ -25,16 +26,24 @@ use neon::js::{
 };
 
 use util::{
+    duration_str,
     not,
     get_raw,
     get_obj,
     get_fn,
     to_string,
+
     hyphenate_style_name,
 
+    get_intrinsic_namespace,
+    get_child_namespace,
     is_custom_component,
     escape_text_content_for_browser,
     dangerous_style_value,
+};
+use util::dom_namespaces::{
+    HTML_NAMESPACE,
+    NAMESPACES
 };
 use util::dom_property::PROPERTIES;
 use util::omitted_close_tags::OMITTED_CLOSE_TAGS;
@@ -64,7 +73,7 @@ lazy_static! {
     // HTML, we want to make sure that it's a safe tag.
     // http://www.w3.org/TR/REC-xml/#NT-Name
     static ref VALID_TAG_REGEX: Regex = {
-        Regex::new(r#"^[a-zA-Z][a-zA-Z:_\.\-\d]*$"#).unwrap() // Simplified subset
+        Regex::new(r"^[a-zA-Z][a-zA-Z:_\.\-\d]*$").unwrap() // Simplified subset
     };
     static ref VALIDATED_TAG_CACHE: Arc<Mutex<HashSet<String>>> = {
         Arc::new(Mutex::new(HashSet::new()))
@@ -349,8 +358,8 @@ fn render_type(
     static_markup: bool,
     previous_was_text_node: bool,
     level: u32,
-) -> u64 {
-    let mut render_cost: u64 = 0;
+) -> Duration {
+    let mut render_cost: Duration = Duration::from_secs(0);
     let mut current_is_text_node = false;
     let type_raw = get_raw(scope, component, "type");
     let type_obj = JsObject::from_raw(type_raw);
@@ -368,9 +377,7 @@ fn render_type(
         let rendered_component = render_fn
             .call(scope, this, vec![obj])
             .unwrap();
-        let t = now.elapsed();
-        let cost = t.as_secs() as u64 * 1000_000_000 + t.subsec_nanos() as u64;
-        render_cost += cost;
+        render_cost += now.elapsed();
         render_cost += render_type(
             html,
             scope,
@@ -455,23 +462,72 @@ fn render_type(
     render_cost
 }
 
+#[derive(Eq, PartialEq)]
 pub enum ReadSize {
     Infinity,
     // How many bytes to read
     Size(usize),
 }
 
+impl PartialOrd for ReadSize {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(
+            match (self, other) {
+                (&ReadSize::Infinity, &ReadSize::Infinity) => Ordering::Equal,
+                (&ReadSize::Infinity, &ReadSize::Size(_)) => Ordering::Greater,
+                (&ReadSize::Size(_), &ReadSize::Infinity) => Ordering::Less,
+                (&ReadSize::Size(a), &ReadSize::Size(b)) => a.cmp(&b),
+            }
+        )
+    }
+}
+
+pub struct Frame {
+    dom_namespace: &'static str,
+    children: Vec<JsValue>,
+    child_index: u32,
+    context: JsObject,
+    footer: String,
+}
+
 pub struct DomServerRenderer<'a> {
     pub call: Call<'a>,
+    stack: Vec<Frame>,
+    exhausted: bool,
+    current_select_value: JsValue,
+    previous_was_text_node: bool,
     static_markup: bool,
 }
 
 impl<'a> DomServerRenderer<'a> {
     pub fn new(call: Call<'a>, static_markup: bool) -> Self {
-        DomServerRenderer{call, static_markup}
+        let top_frame = Frame {
+            dom_namespace: HTML_NAMESPACE,
+            children: vec![],
+            child_index: 0,
+            context: JsObject::from_raw(
+                JsObject::new(call.scope)
+                    .deref()
+                    .to_raw()
+            ),
+            footer: String::new(),
+        };
+        let stack = vec![top_frame];
+        let exhausted = false;
+        let current_select_value = *JsNull::new().as_value(call.scope).deref();
+        let previous_was_text_node = false;
+        DomServerRenderer{
+            call,
+            stack,
+            exhausted,
+            current_select_value,
+            previous_was_text_node,
+            static_markup,
+        }
     }
 
     pub fn read(&mut self, size: ReadSize) -> Option<String> {
+        let now = Instant::now();
         let mut html = String::new();
         let component = self.call
             .arguments
@@ -481,9 +537,48 @@ impl<'a> DomServerRenderer<'a> {
         let render_cost = render_type(
             &mut html, self.call.scope, component, self.static_markup, false, 0
         );
-        let cost_ms = render_cost / 1000_1000;
-        let cost_micros = render_cost / 1000;
-        println!("[Render cost]: {}.{}ms, {}ns", cost_ms, cost_micros, render_cost);
+        println!("[Render cost]: {}", duration_str(render_cost));
+        println!("[Render total cost]: {}", duration_str(now.elapsed()));
         Some(html)
+    }
+
+    pub fn render(
+        &mut self,
+        child: &JsValue,
+        context: &JsObject,
+        parent_namespace: &str
+    ) -> String {
+        "".to_owned()
+    }
+
+    pub fn render_DOM(
+        &mut self,
+        element: &JsValue,
+        context: &JsObject,
+        parent_namespace: &'static str
+    ) -> String {
+        let tag = JsObject
+            ::from_raw(element.to_raw()).get(self.call.scope, "type")
+            .unwrap()
+            .deref()
+            .to_string(self.call.scope)
+            .unwrap()
+            .deref()
+            .value()
+            .to_lowercase();
+        let namespace = match parent_namespace {
+            HTML_NAMESPACE => get_intrinsic_namespace(tag.as_str()),
+            _ => parent_namespace
+        };
+        validate_dangerous_tag(tag.as_str());
+        let props = get_obj(self.call.scope, element.to_raw(), "props");
+        match tag.as_str() {
+            "input" => {},
+            "textarea" => {},
+            "select" => {},
+            "option" => {},
+            _ => {},
+        };
+        "".to_owned()
     }
 }

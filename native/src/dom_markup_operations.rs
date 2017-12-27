@@ -30,10 +30,17 @@ use util::{
 
 
 lazy_static! {
-    static ref MARKUP_FOR_ROOT: String = format!("{}=\"\"", ROOT_ATTRIBUTE_NAME);
-    static ref VALID_ATTRIBUTE_NAME_REGEX: Regex = Regex::new(format!(
-        "^[{}][{}]*$", ATTRIBUTE_NAME_START_CHAR, *ATTRIBUTE_NAME_CHAR
-    ).as_str()).unwrap();
+    static ref MARKUP_FOR_ROOT: String = {
+        format!("{}=\"\"", ROOT_ATTRIBUTE_NAME)
+    };
+    static ref VALID_ATTRIBUTE_NAME_REGEX: Regex = {
+        let pattern = format!(
+            "^[{}][{}]*$",
+            ATTRIBUTE_NAME_START_CHAR,
+            *ATTRIBUTE_NAME_CHAR
+        );
+        Regex::new(pattern.as_str()).unwrap()
+    };
     static ref ILLEGAL_ATTRIBUTE_NAME_CACHE: Arc<Mutex<HashSet<String>>> = {
         Arc::new(Mutex::new(HashSet::new()))
     };

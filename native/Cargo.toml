@@ -6,7 +6,7 @@ license = "MIT"
 build = "build.rs"
 
 [lib]
-name = "test_react_ssr"
+name = "react_neon_ssr"
 crate-type = ["dylib"]
 
 [build-dependencies]
