@@ -537,8 +537,8 @@ impl<'a> DomServerRenderer<'a> {
         let render_cost = render_type(
             &mut html, self.call.scope, component, self.static_markup, false, 0
         );
-        println!("[Render cost]: {}", duration_str(render_cost));
-        println!("[Render total cost]: {}", duration_str(now.elapsed()));
+        // println!("[Render cost]: {}", duration_str(render_cost));
+        // println!("[Render total cost]: {}", duration_str(now.elapsed()));
         Some(html)
     }
 

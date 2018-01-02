@@ -8,10 +8,11 @@
     "react-scripts": "0.9.5"
   },
   "dependencies": {
-    "neon-cli": "^0.1.22",
+    "benchmark": "^2.1.4",
     "express": "^4.14.0",
     "ignore-styles": "^5.0.1",
     "import-export": "^1.0.1",
+    "neon-cli": "^0.1.22",
     "node-fetch": "^1.6.3",
     "react": "^16.1.1",
     "react-dom": "^16.1.1"
